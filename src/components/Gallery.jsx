@@ -6,6 +6,7 @@ import "react-multi-carousel/lib/styles.css";
 import Loading from "./Loading.jsx";
 
 const RMCarousel = Carousel.default ? Carousel.default : Carousel;
+const PLACEHOLDER_IMAGE = "https://placehold.co/400";
 
 const fadeIn = keyframes`
   from {
@@ -20,7 +21,7 @@ const fadeIn = keyframes`
 
 const GallerySection = styled.section`
   width: 100%;
-  padding: 100px 20px;
+  padding: 20px 20px;
   background-color: white;
   position: relative;
   overflow: hidden;
@@ -65,7 +66,7 @@ const MemberCard = styled.div`
   animation-delay: ${props => props.index * 0.1}s;
   
   width: 260px;
-  height: 320px;
+  min-height: 320px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -78,7 +79,7 @@ const MemberCard = styled.div`
 
   @media (max-width: 768px) {
     width: 240px;
-    height: 300px;
+    min-height: 300px;
     padding: 1rem;
     padding-top: 25px;
     margin: 15px 0;
@@ -155,13 +156,33 @@ const MemberRole = styled.p`
   min-height: 0;
 `;
 
-const MemberEmail = styled.p`
+const MemberDescription = styled.p`
+  font-size: 0.85rem;
+  color: #444;
+  margin: 0;
+  line-height: 1.35;
+`;
+
+const MemberEmail = styled.a`
   font-size: 0.8rem;
   color: #555;
   margin: 0;
   transition: color 0.3s ease;
   word-break: break-word;
   min-height: 0;
+  text-decoration: none;
+
+  &:hover {
+    color: #00963c;
+  }
+`;
+
+const MemberWebsite = styled.a`
+  font-size: 0.8rem;
+  color: #00508c;
+  margin: 0;
+  text-decoration: none;
+  word-break: break-word;
 
   &:hover {
     color: #00963c;
@@ -230,6 +251,14 @@ const StyledCarousel = styled(RMCarousel)`
   }
 `;
 
+const StaticGrid = styled.div`
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 30px;
+  padding: 10px 0 30px;
+`;
+
 const Gallery = ({ url, nameOnPage }) => {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -238,7 +267,14 @@ const Gallery = ({ url, nameOnPage }) => {
     const fetchData = async () => {
       try {
         const response = await axios.get(url);
-        setMembers(response.data);
+        const data = Array.isArray(response.data) ? [...response.data] : [];
+        data.sort((a, b) => {
+          if (typeof a.order === "number" && typeof b.order === "number") {
+            return a.order - b.order;
+          }
+          return 0;
+        });
+        setMembers(data);
       } catch (error) {
         console.error("Error fetching members:", error);
       } finally {
@@ -251,7 +287,7 @@ const Gallery = ({ url, nameOnPage }) => {
 
   if (loading) return <Loading />;
 
-  const responsive = {
+  const baseResponsive = {
     superLargeDesktop: {
       breakpoint: { max: 4000, min: 1280 },
       items: 4,
@@ -270,38 +306,78 @@ const Gallery = ({ url, nameOnPage }) => {
     },
   };
 
+  const adjustedResponsive = Object.entries(baseResponsive).reduce(
+    (acc, [key, config]) => {
+      acc[key] = {
+        breakpoint: config.breakpoint,
+        items: Math.min(config.items, Math.max(1, members.length)),
+      };
+      return acc;
+    },
+    {}
+  );
+
+  const shouldShowTitle = Boolean(nameOnPage && nameOnPage.trim().length);
+  const shouldUseCarousel = members.length > 2;
+
+  const renderMemberCard = (member, index) => (
+    <MemberCard key={member.id ?? index} index={index}>
+      <ImageContainer>
+        <img 
+          src={member.imageLink || PLACEHOLDER_IMAGE} 
+          alt={member.name || "Imagem"}
+          loading="lazy"
+        />
+      </ImageContainer>
+      <MemberInfo>
+        <MemberName>{member.name || "Sem nome"}</MemberName>
+        {member.role && (
+          <MemberRole>
+            {member.role} {member.acronym ? `(${member.acronym})` : null}
+          </MemberRole>
+        )}
+        {!member.role && member.description && (
+          <MemberDescription>{member.description}</MemberDescription>
+        )}
+        {member.email && (
+          <MemberEmail href={`mailto:${member.email}`}>
+            {member.email}
+          </MemberEmail>
+        )}
+        {member.website && (
+          <MemberWebsite
+            href={member.website}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {member.website}
+          </MemberWebsite>
+        )}
+      </MemberInfo>
+    </MemberCard>
+  );
+
   return (
     <GallerySection>
-      <SectionTitle>{nameOnPage}</SectionTitle>
-      <StyledCarousel
-        responsive={responsive}
-        ssr={true}
-        infinite={true}
-        autoPlay={true}
-        autoPlaySpeed={5000}
-        keyBoardControl={true}
-        showDots={true}
-        itemClass="carousel-item"
-      >
-        {members.map((member, index) => (
-          <MemberCard key={index} index={index}>
-            <ImageContainer>
-              <img 
-                src={member.imageLink} 
-                alt={member.name}
-                loading="lazy"
-              />
-            </ImageContainer>
-            <MemberInfo>
-              <MemberName textLength={member.name.length}>{member.name}</MemberName>
-              <MemberRole textLength={member.role.length}>
-                {member.role} {member.acronym ? `(${member.acronym})` : null}
-              </MemberRole>
-              <MemberEmail textLength={member.email.length}>{member.email}</MemberEmail>
-            </MemberInfo>
-          </MemberCard>
-        ))}
-      </StyledCarousel>
+      {shouldShowTitle && <SectionTitle>{nameOnPage}</SectionTitle>}
+      {shouldUseCarousel ? (
+        <StyledCarousel
+          responsive={adjustedResponsive}
+          ssr={true}
+          infinite={members.length > 3}
+          autoPlay={members.length > 3}
+          autoPlaySpeed={5000}
+          keyBoardControl={members.length > 1}
+          showDots={members.length > 1}
+          itemClass="carousel-item"
+        >
+          {members.map((member, index) => renderMemberCard(member, index))}
+        </StyledCarousel>
+      ) : (
+        <StaticGrid>
+          {members.map((member, index) => renderMemberCard(member, index))}
+        </StaticGrid>
+      )}
     </GallerySection>
   );
 };

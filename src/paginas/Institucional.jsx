@@ -2,6 +2,7 @@ import React from "react";
 import { Container } from "@mui/material";
 import { styled } from "@mui/system";
 import Loading from "../components/Loading.jsx";
+import Gallery from "../components/Gallery.jsx";
 import MarkdownContent from "../components/MarkdownContent.jsx";
 
 const Root = styled(Container)({
@@ -51,10 +52,35 @@ Somos uma instituição supra-partidária, ou seja,  não endossa propostas part
 
 `;
 
+const markdownContent2 = `
+
+## Apoio à Marca
+
+A IFMSA Brazil conta com o apoio de diversas empresas e organizações que acreditam em nossa missão e valores, e que colaboram com as nossas ações e com o fortalecimento de nossa marca.
+
+`;
+
+const markdownContent3 = `
+
+## Colaborações institucionais
+
+A IFMSA Brazil conta com o apoio de diversas instituições, que colaboram com as nossas ações e com o fortalecimento de nossa marca.
+`;
+
   return (
     <Root>
       <Title>{"Estrutura da IFMSA Brazil"}</Title>
       <MarkdownContent content={markdownContent1} />
+      <MarkdownContent content={markdownContent2} />
+      <Gallery
+        url="https://blog2.ifmsabrazil.org/api/apoiadores"
+        nameOnPage=""
+      />
+      <MarkdownContent content={markdownContent3} />
+      <Gallery
+        url="https://blog2.ifmsabrazil.org/api/colaboradores"
+        nameOnPage=""
+      />
     </Root>
   );
 };
